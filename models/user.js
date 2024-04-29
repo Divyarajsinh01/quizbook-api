@@ -1,105 +1,195 @@
-const mongoose = require('mongoose')
-const validator = require('validator')
-const bcrypt = require('bcryptjs')
+// user model with mongodb
 
-const userSchema = new mongoose.Schema({
-    userName: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true
-    },
-    email: {
-        type: String,
-        trim: true,
-        required: true,
-        unique: true,
-        validate: {
-            validator: validator.isEmail,
-            message: 'Please provide a valid email'
-        }
-    },
-    password: {
-        type: String,
-        trim: true,
-        required: true,
-        minlength: 7,
-        validate(password) {
-            if (password.toLowerCase().includes('password')) {
-                throw new Error('password is invalid')
-            }
-        }
-        // validate: {
-        //     validator: function (value) {
-        //         if (!validator.isStrongPassword(value)) {
-        //             return false;
-        //         }
-        //         return true;
-        //     },
-        //     message: 'Please provide a strong password'
-        // }
-    },
-    confirm_password : {
-        type: String,
-        trim: true,
-        required:true,
-        validate (value){
-            if(value !== this.password){
-                throw new Error('password does not match')
-            }
-        }
-    }
-})
+// const mongoose = require('mongoose')
+// const validator = require('validator')
+// const moment = require('moment')
 
-// userSchema.statics.findByCredentials = async(email, password) => {
-//     const user = await User.findOne({email})
+// const userSchema = new mongoose.Schema({
+//   firstName: {
+//     type: String,
+//     required: true,
+//     trim: true
+//   },
+//   lastName: {
+//     type: String,
+//     required: true,
+//     trim: true
+//   },
+//   email: {
+//     type: String,
+//     trim: true,
+//     required: true,
+//     // unique: true,
+//     validate: {
+//       validator: validator.isEmail,
+//       message: 'Please provide a valid email'
+//     }
+//   },
+//   gender: [{
+//     _id: {
+//       type: Number,
+//       required: true,
+//       trim: true
+//     },
+//     name: {
+//       type: String,
+//       required: true,
+//       trim: true
+//       // enum: ['teacher', 'student', 'admin']
+//     }
+//   }],
+//   DOB: {
+//     type: String,
+//     required: true,
+//     validate: {
+//       validator: (value) => {
+//         const formattedDate = moment(value, 'DD/MM/YYYY', true) // Parse date in DD/MM/YYYY format
+//         return formattedDate.isValid()
+//       },
+//       message: 'Please provide a valid date in DD/MM/YYYY format for DOB'
+//     }
+//   },
+//   mobileNumber: {
+//     type: String,
+//     required: true,
+//     trim: true,
+//     unique: true,
+//     validate: {
+//       validator: (value) => {
+//         if (!validator.isMobilePhone(value, 'en-IN', { strictMode: false })) {
+//           return false
+//         }
+//         return true
+//       },
+//       message: 'Please provide a valid mobile number'
+//     }
+//   },
+//   // OTP:{
+//   //     type: Number,
+//   //     // required: true
+//   // },
+//   profession: [{
+//     _id: {
+//       type: Number,
+//       required: true,
+//       trim: true
+//     },
+//     name: {
+//       type: String,
+//       required: true,
+//       trim: true
+//       // enum: ['teacher', 'student', 'admin']
+//     }
+//   }],
+//   user_id: {
+//     type: Number,
+//     unique: true
+//   },
+//   tokens: [{
+//     token: {
+//       type: String,
+//       required: true
+//     }
+//   }]
+// }, {
+//   timestamps: false
+// })
 
-//     if(!user){
-//         throw new Error('unable to login')
+// userSchema.pre('save', async function (next) {
+//   // Check if the user already has a userId
+//   if (!this.user_id) {
+//     // Generate a unique userId (e.g., a random alphanumeric string)
+//     let generatedUserId
+//     let isUnique = false
+
+//     while (!isUnique) {
+//       generatedUserId = generateUserId() // Implement your userId generation logic
+//       // Check if the generated userId is unique in the database
+//       const existingUser = await this.constructor.findOne({ userId: generatedUserId })
+
+//       if (!existingUser) {
+//         isUnique = true
+//       }
 //     }
 
-//     const isMatch = await bcrypt.compare(password, user.password)
-//     if(!isMatch){
-//         throw new Error('unable to login')
-//     }
+//     this.user_id = generatedUserId
+//   }
 
-//     return user
+//   next()
+// })
+
+// function generateUserId () {
+//   const minUserId = 1000
+//   const maxUserId = 9999
+//   return Math.floor(Math.random() * (maxUserId - minUserId + 1)) + minUserId
 // }
 
-userSchema.statics.findByCredentials = async (email, password) => {
-    try {
-        const user = await User.findOne({ email });
+// const User = mongoose.model('user', userSchema)
 
-        if (!user) {
-            // console.error('User not found for email:', email);
-            throw new Error('Unable to login');
-        }
+// module.exports = User
 
-        const isMatch = await bcrypt.compare(password, user.password)
-        if (!isMatch) {
-            throw new Error('unable to login')
-        }
+// user model with Sequelize
 
-        return user
-    } catch (error) {
-        // console.error('Error in findByCredentials:', error);
-        throw error;
+const { DataTypes } = require('sequelize')
+
+const sequelize = require('../db/dbConnect')
+
+const User = sequelize.define('User', {
+  // Define user model fields here
+  id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    autoIncrement: true,
+    primaryKey: true,
+    unique: true
+  },
+  firstName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      isEmail: true
     }
-
-}
-
-
-//hash pass
-userSchema.pre('save', async function (next) {
-    const user = this
-
-    if (user.isModified('password')) {
-        user.password = await bcrypt.hash(user.password, 8)
+  },
+  gender: {
+    type: DataTypes.JSON(),
+    allowNull: false
+  },
+  DOB: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  mobileNumber: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      isMobilePhone: {
+        args: ['en-IN'],
+        msg: 'Please provide a valid mobile number'
+      }
     }
-
-    next()
+  },
+  profession: {
+    type: DataTypes.JSON(),
+    allowNull: false
+  },
+  userProfile: {
+    type: DataTypes.STRING
+  },
+  tokens: {
+    type: DataTypes.STRING
+    // defaultValue: []
+  }
+}, {
+  timestamps: false
 })
-
-const User = mongoose.model('user-data', userSchema)
 
 module.exports = User
